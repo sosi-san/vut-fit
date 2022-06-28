@@ -1,0 +1,249 @@
+#!/bin/sh
+POSIXLY_CORRECT=yes
+if [ $# -eq 0 ]
+then
+	echo 'No arguments found!'
+	exit
+
+fi
+SYS=$(uname)
+
+DATUM=""
+if [ "$SYS" = "FreeBSD" ];
+then
+	DATUM="gdate"
+else
+	DATUM="date"
+fi
+doesLogExist()
+{
+	FILTER=0
+	for i in "$@";
+	do
+		case $i in
+			-a)
+				FILTER=$((FILTER+2))
+			;;
+			-b)
+				FILTER=$((FILTER+2))
+			;;
+			-ip)
+				FILTER=$((FILTER+1))
+			;;
+			-uri)
+				FILTER=$((FILTER+1))
+			;;
+			wana)
+			;;
+			list-ip)
+			;;
+			list-hosts)
+			;;
+			list-uri)
+			;;
+			hist-ip)
+			;;
+			hist-load)
+			;;
+			*)
+				if [ "$FILTER" != "0" ]; then
+					FILTER=$((FILTER-1))
+					continue
+				fi
+				if [ ! -f "$i" ];
+				then
+					echo "Soubor neexistuje"
+					exit 1
+				else
+					filename=$(basename "$i")
+					ext="${filename##*.}"
+					if [ "$ext" = "gz" ];
+					then
+						TMP=$(gzip -cd $i)
+					else
+						TMP=$(cat "$i")
+					fi
+					LOG="$LOG$TMP"
+				fi
+			;;
+		esac
+	done
+	if test -z "$LOG"
+	then
+	      LOG='cat'
+	fi
+}
+printStandartInfo()
+{
+	echo "Tady bude výstup programu při zadání pouze adresy souboru"
+}
+printLog()
+{
+	echo "$LOG"
+}
+
+filterIp()
+{
+	LOG=$(echo "$LOG" | sed "/$1/!d")
+}
+filterUri()
+{
+
+	#LOG=$(echo "$LOG" | awk -v uri=$1 '/uri/{ print }')
+	LOG=$(echo "$LOG" | grep -E $1)
+}
+filterDateAfter()
+{
+	DATE=$(LANG=en_us_88591; "$DATUM" -d $1 +%d/%b/%Y)
+	TIME=$(LANG=en_us_88591; "$DATUM" -d $2 +:%H:%M:%S)
+	DATE=$DATE$TIME
+	LOG=$(echo "$LOG" | awk -F '[[ ]' -v date=$DATE '{ if (date<$5) {print} }')
+}
+filterDateBefore()
+{
+	DATE=$(LANG=en_us_88591; "$DATUM" -d $1 +%d/%b/%Y)
+	TIME=$(LANG=en_us_88591; "$DATUM" -d $2 +:%H:%M:%S)
+	DATE=$DATE$TIME
+	LOG=$(echo "$LOG" | awk -F '[[ ]' -v date=$DATE '{ if (date>$5) {print} }')
+}
+listIp()
+{
+	LOG=$(echo "$LOG" | awk '{ print $1 }' | sort | uniq)
+}
+listHosts()
+{
+
+	TMPLOG=""
+	N="
+"
+	TMP=""
+	listIp
+	for line in $LOG
+	do
+	  TMP=$(host $line | awk '{ print $5 }')
+		if [ "$TMP" = "3(NXDOMAIN)" ];
+		then
+			TMP=$line
+		fi
+		TMPLOG=$TMPLOG$TMP
+		TMPLOG=$TMPLOG$N
+	done
+	LOG=$TMPLOG
+}
+listUri()
+{
+	LOG=$(echo "$LOG" | awk '{ print $7 }' | grep -E "^/" | sort | uniq)
+}
+histIp()
+{
+	LOG=$(echo "$LOG" | awk '{ print $1 }' | sort | uniq -c | sort -r)
+	#LOG=$(echo "$LOG" | sort | uniq -c | sort -r)
+	LOG=$(echo "$LOG" | awk '
+	{
+		printf($2) " ("$1"): "
+		for (i=0;i<$1;i++) {
+			printf("#");
+		}
+		printf("\n");
+	}')
+	#{for (i=0;i<=$1;i++){printf("#")}
+}
+histLoad()
+{
+	LOG=$(echo "$LOG" | awk -F '[[ ]' '{ print $5 }')
+	LOG=$(echo "$LOG" | awk -F ':' '{ printf("%s %d\n",$1,$2) }')
+	#LOG=$(echo "$LOG" | sed "s/\//-/g" | sed -r "s/.{6}$//" | tr ':' ' )
+	LOG=$(echo "$LOG" | sed "s/\//-/g")
+	TMP=""
+	N="
+"
+	IFS="
+	"
+	for i in $LOG; do
+	  DATE=$("$DATUM" -d "$i" '+%Y-%m-%d %H:00')$N
+		TMP=$DATE$TMP
+	done
+	LOG=$TMP
+
+	LOG=$(echo "$LOG" | sed '/^$/d')
+	LOG=$(echo "$LOG" | sort | uniq -c | sort -r)
+	LOG=$(echo "$LOG" | awk '
+	{
+		printf($2" "$3) " ("$1"): "
+		for (i=0;i<$1;i++) {
+			printf("#");
+		}
+		printf("\n");
+	}')
+	LOG=$(echo "$LOG" | sort)
+}
+
+#LOG=$(eval echo \$* | awk '{ print $NF }')
+doesLogExist $@
+FILTER=0
+FUNCTION=""
+for i in "$@";
+do
+	if [ "$FILTER" = "1" ]; then
+		case "$FUNCTION" in
+			filterDateAfter)
+				filterDateAfter $i
+				;;
+			filterDateBefore)
+				filterDateBefore $i
+				;;
+			filterIp)
+				filterIp $i
+				;;
+			filterUri)
+				filterUri $i
+				;;
+		esac
+		FILTER=$((FILTER-1))
+	else
+	  case $i in
+	    -a)
+				FILTER=$((FILTER+1))
+				FUNCTION=filterDateAfter
+	      ;;
+			-b)
+				FILTER=$((FILTER+1))
+				FUNCTION=filterDateBefore
+				;;
+			-ip)
+				FILTER=$((FILTER+1))
+				FUNCTION=filterIp
+				;;
+			-uri)
+				FILTER=$((FILTER+1))
+				FUNCTION=filterUri
+				;;
+			list-ip)
+				listIp
+				break
+				;;
+			list-hosts)
+				listHosts
+				break
+				;;
+			list-uri)
+				listUri
+				break
+				;;
+			hist-ip)
+				histIp
+				break
+				;;
+			hist-load)
+				histLoad
+				break
+				;;
+	    *)
+	      #echo "Invalid option" >&2
+				break
+	      ;;
+	  esac
+	fi
+done
+
+printLog

@@ -1,0 +1,50 @@
+ISA-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	OBJECT-TYPE, Integer32, MODULE-IDENTITY, experimental
+		FROM SNMPv2-SMI
+	DisplayString		
+		FROM SNMPv2-TC
+	MODULE-COMPLIANCE, OBJECT-GROUP
+		FROM SNMPv2-CONF;
+
+isaAgentObject MODULE-IDENTITY
+	LAST-UPDATED 	"202011160000Z"
+	ORGANIZATION 	"VUT-FIT-xwoska00"
+	CONTACT-INFO 	"xwoska00@fit.vutbr.cz"
+	DESCRIPTION 	"Modul pro SNMP clienta"
+	REVISION	"202011160000Z"
+    	DESCRIPTION	"OK"
+	::= { experimental 22 }
+
+
+
+objectLogin OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION	"My login info"
+    ::= { isaAgentObject 1 }
+
+objectTime OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION	"Current time (RFC 3339)"
+    ::= { isaAgentObject 2 }
+
+objectInteger OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION	"Read/write Int32."
+    ::= { isaAgentObject 3 }
+
+objectMyOwn OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION	"Read-only premennu Vasej volby, ktora bude obsahovat nejaku informaciu o systeme (operacny system, mnozstvo RAM, ...)."
+    ::= { isaAgentObject 4 }
+
+END

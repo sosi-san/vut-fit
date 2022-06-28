@@ -1,0 +1,35 @@
+Rozšírenie SNMP agenta
+
+Dynamicke nacitani SNMP agenta
+
+Priklad spusteni
+cp ISA-MIB.txt /usr/share/snmp/mibs
+
+V samostatnem okne
+sudo snmpd -f -L -DnstAgentPluginObject,dlmod
+
+V jinem okne
+make
+snmpset localhost UCD-DLMOD-MIB::dlmodStatus.1 i create
+snmpset localhost UCD-DLMOD-MIB::dlmodName.1 s "isaAgentObject" UCD-DLMOD-MIB::dlmodPath.1 s "/home/user/Downloads/isaAgentObject.so" 
+snmptable localhost UCD-DLMOD-MIB::dlmodTable 
+snmpset localhost UCD-DLMOD-MIB::dlmodStatus.1 i load 
+
+Prikald pouziti:
+snmpget localhost ISA-SNMP::objectLogin.0
+snmpget localhost ISA-SNMP::objectTime.0
+snmpget localhost ISA-SNMP::objectMyOwn.0
+snmpget localhost ISA-SNMP::objectInteger.0
+snmpset localhost ISA-SNMP::objectInteger.0 = 1
+
+Seznam odevzdanych souboru:
+Makefile
+README
+isaAgentObject.c
+isaAgentObject.h
+manual.pdf
+ISA-MIB.txt
+
+
+
+
